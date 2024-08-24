@@ -3,7 +3,6 @@ package a;
 public class Homework {
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		//Task 3: Write adaptable code that will print out the circumference and area of a circle that has a radius of 4.0. 
 		//(Hint: the value of pi is 3.1519 and it never changes)
 		
