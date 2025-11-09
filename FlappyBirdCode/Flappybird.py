@@ -21,6 +21,7 @@ def FlappyBirdCore():
 
     #Misc
     Bird = pygame.image.load("THEBIRDY.png").convert_alpha()
+    #Need to add THEBIRD.png picture into your pygame folder.
     Bird = pygame.transform.scale(Bird, (50,40))
     bird_rect = Bird.get_rect(center=(100, Height//2))
 
