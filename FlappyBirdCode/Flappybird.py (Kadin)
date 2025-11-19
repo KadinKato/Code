@@ -1,0 +1,135 @@
+import pygame
+import sys
+import random
+import time
+from Game_Creations import pipe_creation, pipe_spawner, pipe_movement, check_collision, score
+from Game_Creations import spawn_coin, move_coins, draw_coin, handle_coin_collision, restore_pipes
+
+def FlappyBirdCore():
+    pygame.init()
+    Width, Height = 400, 600
+    screen = pygame.display.set_mode((Width, Height))
+    pygame.display.set_caption("Flappy Bird")
+
+    Blue = (135,206,235)
+
+    Bird = pygame.image.load("THEBIRDY.png").convert_alpha()
+    Bird = pygame.transform.scale(Bird, (50,40))
+    bird_rect = Bird.get_rect(center=(100, Height//2))
+
+    gravity = 0.7
+    bird_movement = 0
+
+    pipe_speed = 3
+    pipes = []
+
+    coins = []
+
+    state = {
+        "score": 0,
+        "lives": 3,
+        "immunity": False,
+        "immunity_end": 0,
+        "double_points": False,
+        "double_end": 0,
+        "pipe_width": 60,
+        "pipe_gap": 150,
+        "base_pwidth": 60,
+        "base_pgap": 150,
+        "pipe_shrink": False,
+        "pipe_restore_time": 0,
+        "red_lives_end": 0
+    }
+
+    Spawnpipe = pygame.USEREVENT
+    pygame.time.set_timer(Spawnpipe, 1200)
+    SpawnCoin = pygame.USEREVENT + 1
+    pygame.time.set_timer(SpawnCoin, 5000)
+
+    font = pygame.font.SysFont(None, 40)
+    clock = pygame.time.Clock()
+    running = True
+
+    while True:
+        now = time.time()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE and running:
+                    bird_movement = -8
+                elif event.key == pygame.K_SPACE and not running:
+                    bird_rect.center = (100, Height//2)
+                    bird_movement = 0
+                    pipes.clear()
+                    coins.clear()
+                    state.update({
+                        "score": 0,
+                        "lives": 3,
+                        "immunity": False,
+                        "double_points": False,
+                        "pipe_width": 60,
+                        "pipe_gap": 150,
+                        "pipe_shrink": False
+                    })
+                    running = True
+            if event.type == Spawnpipe:
+                pipes.extend(pipe_spawner(Width, Height, state["pipe_width"], state["pipe_gap"]))
+            if event.type == SpawnCoin:
+                coins.append(spawn_coin(Width, Height))
+
+        screen.fill(Blue)
+
+        if running:
+            bird_movement += gravity
+            bird_rect.centery += bird_movement
+            screen.blit(Bird, bird_rect)
+
+            pipes = pipe_movement(pipes, pipe_speed)
+            pipe_creation(screen, pipes)
+
+            running = check_collision(bird_rect, pipes, Height, state)
+
+            coins = move_coins(coins)
+            for rect, color, born in coins:
+                draw_coin(screen, rect, color, born)
+            coins = handle_coin_collision(coins, bird_rect, state)
+
+            # Handle power-up durations
+            powerup_texts = []
+            if state["immunity"] and now < state["immunity_end"]:
+                powerup_texts.append(f"IMMUNITY!: {int(state['immunity_end']-now)}s")
+            else:
+                state["immunity"] = False
+            if state["double_points"] and now < state["double_end"]:
+                powerup_texts.append(f"DOUBLE POINTS!: {int(state['double_end']-now)}s")
+            else:
+                state["double_points"] = False
+            if state["pipe_shrink"] and now < state["pipe_restore_time"]:
+                powerup_texts.append(f"PIPES SHRINK!: {int(state['pipe_restore_time']-now)}s")
+            elif state["pipe_shrink"] and now >= state["pipe_restore_time"]:
+                restore_pipes(state)
+            
+            now = time.time()
+            if now < state["red_lives_end"]:
+                text = font.render("+2 LIVES!", True, (255, 0, 0))
+                screen.blit(text, (Width//2 - text.get_width()//2, 80))
+                
+            state["score"] += 0.02 * (2 if state["double_points"] else 1)
+            score(screen, font, state["score"], state["lives"])
+
+            # Draw active power-ups
+            for i, text in enumerate(powerup_texts):
+                pu_text = font.render(text, True, (0,0,0))
+                screen.blit(pu_text, (10, 50+30*i))
+
+        else:
+            over_text = font.render("GAME OVER! Press SPACE", True, (255,0,0))
+            screen.blit(over_text, (40, Height//2-20))
+
+        pygame.display.update()
+        clock.tick(60)
+
+if __name__ == "__main__":
+    FlappyBirdCore()
