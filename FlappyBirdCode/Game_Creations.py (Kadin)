@@ -1,0 +1,132 @@
+import pygame
+import random
+import time
+import math
+
+# Colors
+Green = (0, 200, 0)
+RED = (255, 0, 0)
+LIGHT_GREEN = (0, 255, 0)
+ORANGE = (255, 165, 0)
+BLUE = (0, 0, 255)
+
+coin_colors = {
+    "red": RED,
+    "green": LIGHT_GREEN,
+    "orange": ORANGE,
+    "blue": BLUE
+}
+
+# -------------------------
+# Pipes
+# -------------------------
+def pipe_spawner(swidth, sheight, pwidth, pgap):
+    pheight = random.randint(100, sheight - 250)
+    bottom = pygame.Rect(swidth, pheight + pgap, pwidth, sheight - (pheight + pgap))
+    top = pygame.Rect(swidth, 0, pwidth, pheight)
+    return [bottom, top]
+
+def pipe_creation(screen, pipes):
+    for p in pipes:
+        pygame.draw.rect(screen, Green, p)
+
+def pipe_movement(pipes, speed):
+    for p in pipes:
+        p.centerx -= speed
+    return [p for p in pipes if p.right > 0]
+
+# -------------------------
+# Collision + lives
+# -------------------------
+def check_collision(bird, pipes, sheight, state):
+    for p in pipes:
+        if bird.colliderect(p):
+            if not state["immunity"]:
+                state["lives"] -= 1
+                if state["lives"] <= 0:
+                    return False
+                else:
+                    state["immunity"] = True
+                    state["immunity_end"] = time.time() + 0.5
+                    return True
+
+    if bird.bottom >= sheight:
+        state["lives"] = 0
+        return False
+    if bird.top <= 0:
+        if not state["immunity"]:
+            state["lives"] -= 1
+            if state["lives"] <= 0:
+                return False
+            else:
+                state["immunity"] = True
+                state["immunity_end"] = time.time() + 0.5
+                return True
+    return True
+
+# -------------------------
+# Score
+# -------------------------
+def score(screen, font, score, lives):
+    score_text = font.render(f"Score: {int(score)}  Lives: {lives}", True, (0,0,0))
+    screen.blit(score_text, (10, 10))
+
+# -------------------------
+# Coins / Power-ups
+# -------------------------
+def spawn_coin(screen_width, screen_height):
+    y = random.randint(80, screen_height-80)
+    color = random.choice(list(coin_colors.keys()))
+    rect = pygame.Rect(screen_width, y, 20, 20)
+    return rect, color, time.time()
+
+def move_coins(coin_list):
+    if coin_list is None:
+        return []
+    updated = []
+    for rect, color, born in coin_list:
+        rect.centerx -= 3
+        if rect.right > 0:
+            updated.append((rect, color, born))
+    return updated
+
+def draw_coin(screen, rect, color, born):
+    elapsed = time.time() - born
+    pulse = 6 * abs(math.sin(elapsed*3)) + 10
+    glow = pygame.Surface((rect.width+30, rect.height+30), pygame.SRCALPHA)
+    pygame.draw.circle(glow, (*coin_colors[color], 80),
+                       (rect.width//2+15, rect.height//2+15),
+                       int(pulse+10))
+    screen.blit(glow, (rect.centerx - rect.width//2 - 15,
+                       rect.centery - rect.height//2 - 15))
+    pygame.draw.circle(screen, coin_colors[color], rect.center, 10)
+
+def handle_coin_collision(coins, bird, state):
+    updated = []
+    now = time.time()
+    for rect, color, born in coins:
+        if bird.colliderect(rect):
+            
+            if color == "red":
+                state["lives"] += 2
+                state["red_lives_end"] = time.time() + 2  # show text for 2 seconds
+            elif color == "green":
+                state["pipe_shrink"] = True
+                state["pipe_restore_time"] = now + 8
+                state["pipe_width"] = state["base_pwidth"] // 2
+                state["pipe_gap"] = int(state["base_pgap"] * 1.5)
+            elif color == "orange":
+                state["immunity"] = True
+                state["immunity_end"] = now + 8
+            elif color == "blue":
+                state["double_points"] = True
+                state["double_end"] = now + 8
+            state["score"] += 5
+        else:
+            updated.append((rect, color, born))
+    return updated
+
+def restore_pipes(state):
+    state["pipe_width"] = state["base_pwidth"]
+    state["pipe_gap"] = state["base_pgap"]
+    state["pipe_shrink"] = False
