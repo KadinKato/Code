@@ -137,7 +137,7 @@ def FlappyBirdCore():
             current_pipe_delay = pipe_delay
             if state["pipe_slow"] and now < state["slow_end"]:
                 pipe_speed = base_speed * 0.5
-                state["pipe_gap"] = int(state["base_pipe_gap"] * 1.5)
+                ###state["pipe_gap"] = int(state["base_pipe_gap"] * 1.5)
                 current_pipe_delay *= 2.5  # slow pipe spawn
             else:
                 if state["pipe_slow"]:
