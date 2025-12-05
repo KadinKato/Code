@@ -221,8 +221,7 @@ def handle_item_collision(items, bird, state):
                 state["slow_end"] = now + 8
                 state["reward_popup"] = ("SLOW PIPES!", now + 2)
 
-            # Normal coin gives base 5 points
-            state["score"] += 5
+            
 
         else:
             updated.append((rect, color, born))
